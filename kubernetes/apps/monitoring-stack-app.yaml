@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: monitoring-stack
-  namespace: argocd
+  namespace: argopd
 spec:
   project: default
   source:
@@ -10,14 +10,18 @@ spec:
     chart: "kube-prometheus-stack"
     targetRevision: "58.2.1"
     helm:
-      # This 'values' block contains the fix for NodeAffinity
+      # This block contains our combined fix
       values: |
-        # This is to prevent CRD conflicts
+        # This prevents CRD installation conflicts
         crds:
           enabled: false
-        # This is the new part that disables the scheduling rules
+
+        # Your idea: Change the port to avoid conflicts
         prometheus-node-exporter:
-          affinity: {}
+          hostPort: 9101
+          affinity: {} # And our fix to disable scheduling rules
+
+        # Also disable affinity for the other components
         prometheus:
           prometheusSpec:
             affinity: {}
