@@ -1,3 +1,4 @@
+# In kubernetes/apps/monitoring-stack-app.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -10,9 +11,20 @@ spec:
     chart: "kube-prometheus-stack"
     targetRevision: "58.2.1"
     helm:
+      # This tells the chart to override some default values
       values: |
+        # We keep this from before to prevent CRD conflicts
         crds:
           enabled: false
+        # This is the new part that disables the scheduling rules
+        prometheus-node-exporter:
+          affinity: {}
+        prometheus:
+          prometheusSpec:
+            affinity: {}
+        alertmanager:
+          alertmanagerSpec:
+            affinity: {}
   destination:
     server: "https://kubernetes.default.svc"
     namespace: monitoring
