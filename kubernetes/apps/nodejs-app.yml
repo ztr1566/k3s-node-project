@@ -9,7 +9,7 @@ spec:
   source:
     repoURL: 'https://github.com/ztr1566/k3s-node-project.git'
     targetRevision: HEAD
-    path: kubernetes/manifests/nodejs-app
+    path: kubernetes/manifests/
   destination:
     server: https://kubernetes.default.svc
     namespace: nodejs-app
