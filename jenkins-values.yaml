@@ -1,0 +1,59 @@
+controller:
+  JCasC:
+    configScripts:
+      # This key 'welcome-message' is just a unique name for the config block
+      welcome-message: |
+        jenkins:
+          systemMessage: "Welcome! This Jenkins instance is fully managed by JCasC. Do not save changes from the UI."
+
+      # Configuration for Kubernetes Cloud and Pod Templates
+      kubernetes-cloud: |
+        jenkins:
+          clouds:
+            - kubernetes:
+                name: "kubernetes"
+                serverUrl: "https://kubernetes.default.svc"
+                namespace: "jenkins"
+                jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+                templates:
+                  - name: "kaniko-agent"
+                    label: "kaniko-agent"
+                    containers:
+                      - name: "jnlp"
+                        image: "jenkins/inbound-agent:latest"
+                        workingDir: "/home/jenkins/agent"
+                        alwaysPullImage: true
+                      - name: "kaniko"
+                        image: "gcr.io/kaniko-project/executor:debug"
+                        command: "cat"
+                        ttyEnabled: true
+                        alwaysPullImage: true
+
+      # Configuration for the Global Shared Library
+      global-library: |
+        unclassified:
+          globalLibraries:
+            libraries:
+              - name: "my-project-library"
+                retriever:
+                  modernSCM:
+                    scm:
+                      git:
+                        remote: "YOUR_GIT_REPO_URL_HERE" # <--- غيّر ده للينك بتاع مشروعك
+                        credentialsId: "" # Use empty for public repo
+                defaultVersion: "main"
+                implicit: false
+
+      # Configuration for Credentials
+      credentials: |
+        credentials:
+          system:
+            stores:
+              system:
+                GlobalCredentials:
+                  - kubernetes:
+                      scope: GLOBAL
+                      id: "dockerhub-credentials"
+                      secretName: "dockerhub-secret" # We will create this K8s secret
+                      usernameKey: "username"
+                      passwordKey: "password"
