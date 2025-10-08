@@ -10,18 +10,21 @@ spec:
     chart: "kube-prometheus-stack"
     targetRevision: "58.2.1"
     helm:
+      # This 'values' block contains the fix
       values: |
+        # This is the fix for the Pending pods
+        prometheus-node-exporter:
+          affinity: {}
+        kube-state-metrics:
+          affinity: {}
+        # The rest of the values remain to try and disable other components
         crds:
           enabled: true
         alertmanager:
           enabled: false
         grafana:
           enabled: false
-        kube-state-metrics:
-          enabled: false
         prometheus:
-          enabled: false
-        prometheus-node-exporter:
           enabled: false
   destination:
     server: "https://kubernetes.default.svc"
