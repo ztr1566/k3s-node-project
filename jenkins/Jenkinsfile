@@ -13,7 +13,7 @@ spec:
     image: node:20-alpine
     command: ["cat"]
     tty: true
- - name: buildah
+  - name: buildah
     image: quay.io/buildah/stable:v1.33.4
     command: ["cat"]
     tty: true
