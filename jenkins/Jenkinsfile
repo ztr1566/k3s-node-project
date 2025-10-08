@@ -18,7 +18,7 @@ spec:
     command: ["cat"]
     tty: true
   - name: kaniko
-    image: ghcr.io/kaniko-project/executor:v1.9.1-debug
+    image: gcr.io/kaniko-project/executor:v1.23.2-debug
     command: ["cat"]
     tty: true
     volumeMounts:
