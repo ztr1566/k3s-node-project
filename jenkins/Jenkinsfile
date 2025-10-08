@@ -13,13 +13,13 @@ spec:
     image: node:20-alpine
     command: ["cat"]
     tty: true
-  - name: buildah
-    image: buildah/buildah:latest
-    command: ["cat"]
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:v1.12.1-debug
+    command: ["/bin/sh", "-c", "cat"] 
     tty: true
     volumeMounts:
     - name: docker-config
-      mountPath: /root/.docker
+      mountPath: /kaniko/.docker
   - name: kubectl
     image: bitnami/kubectl:latest
     command: ["cat"]
