@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://charts.bitnami.com/bitnami'
+    repoURL: 'https://repo.broadcom.com/bitnami-files'
     chart: 'prometheus'
     targetRevision: '15.5.4' 
   destination:
