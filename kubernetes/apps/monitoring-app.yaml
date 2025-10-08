@@ -7,8 +7,8 @@ spec:
   project: default
   source:
     repoURL: 'https://charts.bitnami.com/bitnami'
-    chart: 'kube-prometheus'
-    targetRevision: '8.2.3' # A recent stable version
+    chart: 'prometheus' # <--- This is the corrected chart name
+    targetRevision: '15.5.4' # A recent, valid version
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: monitoring
