@@ -14,7 +14,7 @@ spec:
     command: ["cat"]
     tty: true
   - name: buildah
-    image: quay.io/buildah/stable:v1.33.4
+    image: quay.io/buildah/buildah:v1.33.4
     command: ["cat"]
     tty: true
     env:
