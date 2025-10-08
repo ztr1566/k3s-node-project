@@ -14,14 +14,12 @@ spec:
     command: ["cat"]
     tty: true
   - name: kaniko
-    image: gcr.io/kaniko-project/executor:v1.22.1-debug
+    image: ghcr.io/kaniko-project/executor:v1.22.1-debug
     command: ["cat"]
     tty: true
     volumeMounts:
     - name: docker-config
       mountPath: /kaniko/.docker
-    - name: kaniko-cache-volume
-      mountPath: /cache
   - name: kubectl
     image: bitnami/kubectl:latest
     command: ["cat"]
@@ -44,8 +42,6 @@ spec:
       items:
       - key: .dockerconfigjson
         path: config.json
-  - name: kaniko-cache-volume
-    emptyDir: {}
 """
         }
     }
