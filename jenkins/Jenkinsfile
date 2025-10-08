@@ -3,7 +3,22 @@
 pipeline {
     agent {
         kubernetes {
-            label 'kaniko-agent' 
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+    workingDir: /home/jenkins/agent
+    args: ['\$(JENKINS_SECRET)', '\$(JENKINS_NAME)']
+    alwaysPullImage: true
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command: ['cat']
+    tty: true
+    alwaysPullImage: true
+"""
         }
     }
 
