@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/ztr1234567890/k8s.git'
+    repoURL: 'https://github.com/ztr1566/k3s-node-project.git'
     targetRevision: HEAD
     path: kubernetes/apps
   destination:
