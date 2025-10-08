@@ -1,7 +1,11 @@
 @Library('my-project-library') _
 
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            label 'kaniko-agent' 
+        }
+    }
 
     environment {
         DOCKER_IMAGE = "zizoo1566/my-node-app:latest" 
