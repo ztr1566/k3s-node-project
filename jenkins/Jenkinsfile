@@ -14,7 +14,7 @@ spec:
     command: ["cat"]
     tty: true
   - name: buildah
-    image: quay.io/buildah/buildah:latest
+    image: buildah/buildah
     command: ["cat"]
     tty: true
     volumeMounts:
