@@ -8,16 +8,13 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
-  imagePullSecrets:
-  - name: ghcr-secret 
-  - name: gcr-secret  
   containers:
   - name: node
     image: node:24-alpine
     command: ["cat"]
     tty: true
   - name: kaniko
-    image: gcr.io/kaniko-project/executor:debug 
+    image: us-docker.pkg.dev/k8s-infra-prow/images/gcr.io/kaniko-project/executor:v20240226-020d436 
     command: ["cat"]
     tty: true
     volumeMounts:
