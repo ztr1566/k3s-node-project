@@ -1,14 +1,19 @@
-def call(String imageName, String dockerhubCredentialsId) {
-    script {
-        echo "Starting Docker build for ${imageName}..."
+def call(Map config) {
+    def imageName = config.imageName
+    def dockerfile = config.dockerfile ?: 'Dockerfile'
+    def context = config.context ?: '.'
+    def digestFileName = "image-digest.txt"
 
-        docker.withRegistry('https://index.docker.io/v1/', dockerhubCredentialsId) {
-            def customImage = docker.build(imageName, 'app')
-
-            echo "Pushing Docker image..."
-            customImage.push()
-        }
-
-        echo "Image ${imageName} pushed successfully!"
+    container('kaniko') {
+        echo "Building and pushing image: ${imageName}"
+        sh """
+            /kaniko/executor --dockerfile=${dockerfile} \
+                             --context=${context} \
+                             --destination=${imageName} \
+                             --cache=true \
+                             --cache-dir=/cache \
+                             --digest-file=${digestFileName}
+        """
     }
+    return digestFileName
 }

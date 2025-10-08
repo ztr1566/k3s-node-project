@@ -1,5 +1,4 @@
-@Library('my-project-library') _
-
+// jenkins/Jenkinsfile
 pipeline {
     agent {
         kubernetes {
@@ -8,31 +7,128 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - name: jnlp
-    image: jenkins/inbound-agent:latest
-    workingDir: /home/jenkins/agent
-    args: ['\$(JENKINS_SECRET)', '\$(JENKINS_NAME)']
-    alwaysPullImage: true
+  - name: node
+    image: node:20-alpine
+    command: ["cat"]
+    tty: true
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
-    command: ['cat']
+    command: ["cat"]
     tty: true
-    alwaysPullImage: true
+    volumeMounts:
+    - name: docker-config
+      mountPath: /kaniko/.docker
+    - name: kaniko-cache-volume
+      mountPath: /cache
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command: ["cat"]
+    tty: true
+  - name: trivy
+    image: aquasec/trivy:latest
+    command: ["cat"]
+    tty: true
+    volumeMounts:
+    - name: docker-config
+      mountPath: /kaniko/.docker
+  - name: snyk
+    image: snyk/snyk:docker
+    command: ["cat"]
+    tty: true
+  volumes:
+  - name: docker-config
+    secret:
+      secretName: dockerhub-secret # Using the secret we created with JCasC
+      items:
+      - key: .dockerconfigjson
+        path: config.json
+  - name: kaniko-cache-volume
+    emptyDir: {}
 """
         }
     }
 
     environment {
-        DOCKER_IMAGE = "zizoo1566/my-node-app:latest" 
-        DOCKER_CREDS = "dockerhub-credentials" 
+        // --- Using Docker Hub instead of ECR ---
+        DOCKER_REPO    = "zizoo1566/my-node-app" // Your Docker Hub repo name
+        GIT_REPO_URL   = "github.com/ztr1566/k3s-node-project.git" // Your project repo URL
     }
 
     stages {
-        stage('Build and Push') {
+        stage('Initialize') {
+            steps {
+                checkout scm
+                // --- Loading Shared Library from the same repo ---
+                library identifier: 'my-project-library@main', retriever: legacySCM(scm)
+
+                script {
+                    // --- Constructing Docker Hub image tag ---
+                    def imageTag = "${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
+                    env.FULL_IMAGE_NAME = "${env.DOCKER_REPO}:${imageTag}"
+                }
+            }
+        }
+
+        stage('Security Scan: Code (SAST & SCA)') {
+            steps {
+                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                    container('snyk') {
+                        dir('app') {
+                            echo "--- Running Snyk SCA (Dependency Scan) ---"
+                            sh "snyk test --severity-threshold=high"
+
+                            echo "--- Running Snyk SAST (Code Scan) ---"
+                            sh "snyk code test --severity-threshold=high"
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Lint & Test') {
+            steps {
+                // This function is from the Shared Library
+                runTests(appDir: 'app')
+            }
+        }
+
+        stage('Build & Push Image') {
             steps {
                 script {
-                    buildAndPush(DOCKER_IMAGE, DOCKER_CREDS)
+                    // This function is from the Shared Library
+                    def digestFileName = buildAndPush(
+                        imageName: env.FULL_IMAGE_NAME,
+                        dockerfile: 'app/Dockerfile',
+                        context: 'dir://app' // Kaniko requires this format
+                    )
+                    env.DIGEST_FILE_NAME = digestFileName
                 }
+            }
+        }
+        
+        stage('Security Scan: Image (Trivy)') {
+            steps {
+                container('trivy') {
+                    script {
+                        def imageDigest = readFile(env.DIGEST_FILE_NAME).trim()
+                        def repositoryUri = env.FULL_IMAGE_NAME.tokenize(':')[0]
+                        def imageWithDigest = "${repositoryUri}@${imageDigest}"
+
+                        echo "Scanning image with Trivy: ${imageWithDigest}"
+                        sh "trivy image --exit-code 1 --severity HIGH,CRITICAL ${imageWithDigest}"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Cluster (GitOps way)') {
+            steps {
+                // This function from the Shared Library will commit to Git, and ArgoCD will do the rest
+                deployToCluster(
+                    imageURI: env.FULL_IMAGE_NAME,
+                    manifestPath: 'kubernetes/manifests/nodejs-app/deployment.yaml',
+                    gitRepoUrl: env.GIT_REPO_URL
+                )
             }
         }
     }
