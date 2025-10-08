@@ -8,13 +8,16 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://prometheus-community.github.io/helm-charts'
-    chart: 'kube-prometheus-stack'
-    targetRevision: '45.28.0'
+    repoURL: "https://prometheus-community.github.io/helm-charts"
+    chart: "kube-prometheus-stack"
+    targetRevision: "45.28.0" # Keep the working older version
     helm:
+      # This block contains the fix for the 'Pending' pods
       values: |
+        # This prevents CRD installation conflicts
         crds:
           enabled: false
+        # This disables the scheduling rules causing the error
         prometheus-node-exporter:
           affinity: {}
         prometheus:
@@ -24,7 +27,7 @@ spec:
           alertmanagerSpec:
             affinity: {}
   destination:
-    server: 'https://kubernetes.default.svc'
+    server: "https://kubernetes.default.svc"
     namespace: monitoring
   syncPolicy:
     automated:
