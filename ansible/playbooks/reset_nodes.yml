@@ -1,0 +1,54 @@
+---
+- hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "RESET | 1. Stop and disable critical services"
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+      loop:
+        - kubelet
+        - containerd
+      ignore_errors: true
+
+    - name: "RESET | 2. Remove Kubernetes and Containerd packages"
+      apt:
+        name:
+          - kubeadm
+          - kubectl
+          - kubelet
+          - containerd.io
+        state: absent
+        purge: true
+        autoremove: true
+      ignore_errors: true
+
+    - name: "RESET | 3. Remove repository configuration files"
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/kubernetes.list
+        - /etc/apt/sources.list.d/docker.list
+      ignore_errors: true
+
+    - name: "RESET | 4. Remove GPG keys"
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+        - /etc/apt/keyrings/docker.gpg
+      ignore_errors: true
+
+    - name: "RESET | 5. Remove containerd configuration"
+      file:
+        path: /etc/containerd
+        state: absent
+      ignore_errors: true
+
+    - name: "RESET | 6. Final step: Update apt cache to confirm cleanup"
+      apt:
+        update_cache: true

@@ -1,34 +1,155 @@
 ---
-- name: Disable the UFW firewall
-  community.general.ufw:
-    state: disabled
-
-- name: Ensure br_netfilter module is loaded
-  community.general.modprobe:
-    name: br_netfilter
+# tasks file for common role (Definitive Final Version - All Fixes Included)
+- name: 1. Ensure hostname is resolvable
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ ansible_hostname }}"
     state: present
 
-- name: Set kernel parameters for K3s networking
-  ansible.posix.sysctl:
-    name: net.bridge.bridge-nf-call-iptables
-    value: "1"
+- name: 2. CLEANUP | Remove old docker repo file if it exists
+  file:
+    path: /etc/apt/sources.list.d/docker.list
+    state: absent
+
+- name: 3. CLEANUP | Remove old docker GPG key if it exists
+  file:
+    path: /usr/share/keyrings/docker-archive-keyring.gpg
+    state: absent
+
+- name: 4. Disable swap
+  command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+
+- name: 5. Comment out swap in /etc/fstab to disable permanently
+  replace:
+    path: /etc/fstab
+    regexp: '^(\s*[^#\s]+\s+)(\S+\s+)(swap\s+.*)$'
+    replace: '#\1\2\3'
+
+- name: 6. Load required kernel modules
+  modprobe:
+    name: "{{ item }}"
     state: present
-    reload: yes
+  loop:
+    - overlay
+    - br_netfilter
 
-- name: Update apt cache
-  ansible.builtin.apt:
-    update_cache: yes
-    cache_valid_time: 3600
+- name: 7. Ensure kernel modules are loaded on boot
+  copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
 
-- name: Install common packages
-  ansible.builtin.apt:
+- name: 8. Set required sysctl params for kubernetes networking
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - { key: "net.bridge.bridge-nf-call-iptables", value: "1" }
+    - { key: "net.ipv4.ip_forward", value: "1" }
+    - { key: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
+
+- name: 9. Install dependencies
+  apt:
     name:
+      - ca-certificates
       - curl
-      - vim
-      - git
-      - socat
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: 10. Create directory for apt keyrings
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: 11. CLEANUP | Forcefully remove existing docker.gpg key to ensure recreation
+  file:
+    path: /etc/apt/keyrings/docker.gpg
+    state: absent
+
+- name: 12. Add Docker's official GPG key (in binary format)
+  shell: |
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+  args:
+    creates: /etc/apt/keyrings/docker.gpg
+
+- name: 13. Add Docker apt repository (with correct codename)
+  apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable"
+    state: present
+    filename: docker
+
+- name: 14. Install containerd
+  apt:
+    name: containerd.io
+    state: present
+    update_cache: true
+
+# التاسك الجديدة اللي هنضيفها
+- name: 14a. Ensure /etc/containerd directory exists
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: "0755"
+
+- name: 15. Configure containerd and enable CRI plugin
+  shell: |
+    containerd config default > /etc/containerd/config.toml
+    sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+    sed -i 's/disabled_plugins = \["cri"\]/disabled_plugins = \[\]/' /etc/containerd/config.toml
+  args:
+    executable: /bin/bash
+
+- name: 16. Restart and enable containerd service
+  systemd:
+    name: containerd
+    state: restarted
+    enabled: true
+    daemon_reload: true
+
+- name: 17. CLEANUP | Forcefully remove existing k8s repo and key files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    - /etc/apt/sources.list.d/kubernetes.list
+
+- name: 18. Add Kubernetes's official GPG key (in binary format)
+  shell: |
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  args:
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+- name: 19. Add Kubernetes apt repository (new official repo)
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
+    state: present
+    filename: kubernetes
+
+- name: 20. Install Kubernetes packages
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
     state: present
 
-- name: Kill any existing node_exporter process to free up port 9100
-  ansible.builtin.shell: "pkill node_exporter || true"
-  changed_when: false
+- name: 21. Hold Kubernetes packages from being auto-updated
+  command: apt-mark hold {{ item }}
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+  register: apt_mark_result
+  changed_when: "'set on hold' in apt_mark_result.stdout"
+
+- include_tasks: firewall.yml

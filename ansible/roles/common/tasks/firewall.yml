@@ -1,0 +1,49 @@
+---
+- name: FIREWALL | Allow all outgoing traffic
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+
+- name: FIREWALL | Deny all incoming traffic by default
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+
+- name: FIREWALL | Allow SSH connections
+  community.general.ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: FIREWALL | Allow traffic from other cluster nodes on all ports
+  community.general.ufw:
+    rule: allow
+    src: "{{ item }}"
+  loop: "{{ groups['all'] }}"
+
+# --- Master Node Rules ---
+- name: FIREWALL | Master | Allow Kubernetes API server
+  community.general.ufw:
+    rule: allow
+    port: "6443"
+    proto: tcp
+  when: "'master' in group_names"
+
+# --- Worker Node Rules ---
+- name: FIREWALL | Workers | Allow Kubelet API
+  community.general.ufw:
+    rule: allow
+    port: "10250"
+    proto: tcp
+  when: "'workers' in group_names"
+
+- name: FIREWALL | Workers | Allow NodePort services
+  community.general.ufw:
+    rule: allow
+    port: "30000:32767"
+    proto: tcp
+  when: "'workers' in group_names"
+
+
+- name: FIREWALL | Disable UFW
+  community.general.ufw:
+    state: disabled

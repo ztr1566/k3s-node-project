@@ -1,0 +1,7 @@
+---
+- name: "WORKER | 1. Reset existing cluster state"
+  command: kubeadm reset -f
+  ignore_errors: true
+
+- name: "WORKER | 2. Join the worker node to the cluster"
+  command: "{{ hostvars[groups['master'][0]]['join_command'] }}"

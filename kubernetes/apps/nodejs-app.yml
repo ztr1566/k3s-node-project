@@ -1,3 +1,4 @@
+# kubernetes/apps/nodejs-app.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -6,13 +7,15 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/ztr1566/k3s-node-project.git' 
+    repoURL: 'https://github.com/ztr1566/k3s-node-project.git'
     targetRevision: HEAD
-    path: kubernetes/apps/nodejs-app 
+    path: kubernetes/manifests/nodejs-app
   destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: default
+    server: https://kubernetes.default.svc
+    namespace: nodejs-app
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

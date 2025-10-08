@@ -1,0 +1,12 @@
+---
+- name: Build Kubernetes Cluster | Master Node Setup
+  hosts: master
+  become: true
+  roles:
+    - role: kubeadm_master
+
+- name: Build Kubernetes Cluster | Worker Nodes Setup
+  hosts: workers
+  become: true
+  roles:
+    - role: kubeadm_worker

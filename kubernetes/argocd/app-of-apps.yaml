@@ -1,17 +1,18 @@
+# kubernetes/argocd/app-of-apps.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: root
+  name: root-app
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/ztr1566/k3s-node-project.git'
+    repoURL: "https://github.com/ztr1566/k3s-node-project.git"
     targetRevision: HEAD
     path: kubernetes/apps
   destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: argocd
+    server: https://kubernetes.default.svc
+    namespace: default
   syncPolicy:
     automated:
       prune: true
