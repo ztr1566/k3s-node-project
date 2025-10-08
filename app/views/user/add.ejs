@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+  <%- include('../components/meta.ejs') %>
+  <body>
+    <%- include('../components/dark-light.ejs') %>
+    <main class="d-flex flex-nowrap">
+      <%- include('../components/sidebar.ejs', {status: 'add'}) %>
+
+      <section class="w-100">
+        <%- include('../components/navbar.ejs') %>
+        <form
+          action="/user/add.html"
+          method="post"
+          class="mx-0 row gx-3 gy-4 mt-3"
+        >
+          <div class="col-md-6">
+            <label for="inputfirstName4" class="form-label">First Name</label>
+            <input
+              name="firstname"
+              placeholder="Example: Ziad"
+              type="text"
+              class="form-control"
+              id="inputfirstName4"
+              required
+            />
+          </div>
+          <div class="col-md-6">
+            <label name="lastname" for="inputlastName4" class="form-label"
+              >Last Name (Optional)</label
+            >
+            <input
+              name="lastname"
+              placeholder="Example: Rashid"
+              type="text"
+              class="form-control"
+              id="inputlastName4"
+            />
+          </div>
+
+          <div class="col-md-6">
+            <label name="email" for="inputemail4" class="form-label"
+              >Email</label
+            >
+            <input
+              name="email"
+              placeholder="Example: zaid@gmail.com"
+              type="email"
+              class="form-control"
+              id="inputemail4"
+              required
+            />
+          </div>
+          <div class="col-md-6">
+            <label name="phone" for="inputtele4" class="form-label"
+              >Phone Number</label
+            >
+            <input
+              name="phone"
+              placeholder="Example: 011987899"
+              type="number"
+              class="form-control"
+              id="inputtele4"
+              required
+            />
+          </div>
+
+          <div>
+            <div class="col-md-6">
+              <label name="age" for="inputage4" class="form-label">Age</label>
+              <input
+                name="age"
+                placeholder="Example: 25"
+                type="number"
+                class="form-control"
+                id="inputage4"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <div class="col-md-6">
+              <label name="country" for="inputCountry" class="form-label"
+                >Country</label
+              >
+              <select name="country" id="inputCountry" class="form-select">
+                <option selected hidden disabled value="">
+                  Choose here ...
+                </option>
+                <% countryNames.forEach((country) => { %>
+                <option><%= country %></option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div class="col-md-6">
+              <label name="gender" for="inputGender" class="form-label"
+                >Gender</label
+              >
+              <select name="gender" id="inputGender" class="form-select">
+                <option selected hidden disabled value="">
+                  Choose here ...
+                </option>
+                <option>Male</option>
+                <option>Female</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+
+  <script src="../js/bootstrap.bundle.min.js"></script>
+  <script src="../js/sidebars.js"></script>
+  <script src="../js/main.js"></script>
+  <script src="../js/color-modes.js"></script>
+</html>

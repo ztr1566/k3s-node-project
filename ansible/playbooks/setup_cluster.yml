@@ -1,0 +1,14 @@
+---
+- name: Configure K3s Master Node
+  hosts: master
+  become: true
+  roles:
+    - common
+    - k3s_master
+
+- name: Configure K3s Worker Nodes
+  hosts: workers
+  become: true
+  roles:
+    - common
+    - k3s_worker
