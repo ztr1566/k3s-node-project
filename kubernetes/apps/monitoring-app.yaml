@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: 'https://charts.bitnami.com/bitnami'
     chart: 'prometheus'
-    # The targetRevision line has been removed
+    targetRevision: '15.5.4' 
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: monitoring
