@@ -1,4 +1,4 @@
-// jenkins/Jenkinsfile - Final Corrected Version
+// jenkins/Jenkinsfile - Final version with ImagePullSecret
 @Library('my-project-library') _
 
 pipeline {
@@ -8,18 +8,24 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  # --- THIS IS THE NEW PART ---
+  imagePullSecrets:
+  - name: ghcr-secret
+  # --------------------------
   containers:
   - name: node
     image: node:20-alpine
     command: ["cat"]
     tty: true
   - name: kaniko
-    image: ghcr.io/kaniko-project/executor:v1.22.1-debug
+    image: ghcr.io/kaniko-project/executor:debug
     command: ["cat"]
     tty: true
     volumeMounts:
     - name: docker-config
       mountPath: /kaniko/.docker
+    - name: kaniko-cache-volume
+      mountPath: /cache
   - name: kubectl
     image: bitnami/kubectl:latest
     command: ["cat"]
@@ -42,20 +48,22 @@ spec:
       items:
       - key: .dockerconfigjson
         path: config.json
+  - name: kaniko-cache-volume
+    emptyDir: {}
 """
         }
     }
 
     environment {
-        DOCKER_REPO    = "zizoo1566/my-node-app" // Your Docker Hub repo name
-        GIT_REPO_URL   = "github.com/ztr1566/k3s-node-project.git" // Your project repo URL
+        DOCKER_REPO    = "zizoo1566/my-node-app"
+        GIT_REPO_URL   = "github.com/ztr1566/k3s-node-project.git"
     }
 
     stages {
+        // ... باقي المراحل زي ما هي بدون تغيير ...
         stage('Initialize') {
             steps {
                 script {
-                    // Jenkins automatically checks out the code, so we just define the image name
                     def imageTag = "${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
                     env.FULL_IMAGE_NAME = "${env.DOCKER_REPO}:${imageTag}"
                     echo "Pipeline will build and deploy image: ${env.FULL_IMAGE_NAME}"
@@ -78,7 +86,7 @@ spec:
                 }
             }
         }
-        
+
         stage('Lint & Test') {
             steps {
                 runTests(appDir: 'app')
@@ -97,7 +105,7 @@ spec:
                 }
             }
         }
-        
+
         stage('Security Scan: Image (Trivy)') {
             steps {
                 container('trivy') {
