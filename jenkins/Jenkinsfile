@@ -1,4 +1,4 @@
-// jenkins/Jenkinsfile - Final version with BOTH ImagePullSecrets
+// jenkins/Jenkinsfile - Final version with ImagePullSecret
 @Library('my-project-library') _
 
 pipeline {
@@ -9,15 +9,15 @@ apiVersion: v1
 kind: Pod
 spec:
   imagePullSecrets:
-  - name: ghcr-secret
-  - name: gcr-secret
+  - name: ghcr-secret 
+  - name: gcr-secret  
   containers:
   - name: node
     image: node:24-alpine
     command: ["cat"]
     tty: true
   - name: kaniko
-    image: gcr.io/kaniko-project/executor:debug
+    image: gcr.io/kaniko-project/executor:debug 
     command: ["cat"]
     tty: true
     volumeMounts:
@@ -50,6 +50,84 @@ spec:
   - name: kaniko-cache-volume
     emptyDir: {}
 """
+        }
+    }
+
+    environment {
+        DOCKER_REPO    = "zizoo1566/my-node-app"
+        GIT_REPO_URL   = "github.com/ztr1566/k3s-node-project.git"
+    }
+
+    stages {
+        // ... باقي المراحل زي ما هي بدون تغيير ...
+        stage('Initialize') {
+            steps {
+                script {
+                    def imageTag = "${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
+                    env.FULL_IMAGE_NAME = "${env.DOCKER_REPO}:${imageTag}"
+                    echo "Pipeline will build and deploy image: ${env.FULL_IMAGE_NAME}"
+                }
+            }
+        }
+
+        stage('Security Scan: Code (SAST & SCA)') {
+            steps {
+                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                    container('snyk') {
+                        dir('app') {
+                            echo "--- Running Snyk SCA (Dependency Scan) ---"
+                            sh "snyk test --severity-threshold=high"
+
+                            echo "--- Running Snyk SAST (Code Scan) ---"
+                            sh "snyk code test --severity-threshold=high"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Lint & Test') {
+            steps {
+                runTests(appDir: 'app')
+            }
+        }
+
+        stage('Build & Push Image') {
+            steps {
+                script {
+                    def digestFileName = buildAndPush(
+                        imageName: env.FULL_IMAGE_NAME,
+                        dockerfile: 'app/Dockerfile',
+                        context: 'dir://app'
+                    )
+                    env.DIGEST_FILE_NAME = digestFileName
+                }
+            }
+        }
+
+        stage('Security Scan: Image (Trivy)') {
+            steps {
+                container('trivy') {
+                    script {
+                        def imageDigest = readFile(env.DIGEST_FILE_NAME).trim()
+                        def repositoryUri = env.FULL_IMAGE_NAME.tokenize(':')[0]
+                        def imageWithDigest = "${repositoryUri}@${imageDigest}"
+
+                        echo "Scanning image with Trivy: ${imageWithDigest}"
+                        sh "trivy image --exit-code 1 --severity HIGH,CRITICAL ${imageWithDigest}"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Cluster (GitOps way)') {
+            steps {
+                deployToCluster(
+                    imageURI: env.FULL_IMAGE_NAME,
+                    manifestPath: 'kubernetes/manifests/nodejs-app/deployment.yaml',
+                    gitRepoUrl: env.GIT_REPO_URL
+                )
+            }
         }
     }
 }
