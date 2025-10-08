@@ -1,0 +1,20 @@
+@Library('my-project-library') _
+
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "zizoo1566/my-node-app:latest" 
+        DOCKER_CREDS = "dockerhub-credentials" 
+    }
+
+    stages {
+        stage('Build and Push') {
+            steps {
+                script {
+                    buildAndPush(DOCKER_IMAGE, DOCKER_CREDS)
+                }
+            }
+        }
+    }
+}

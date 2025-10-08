@@ -1,0 +1,22 @@
+---
+- name: Setup Cluster Storage
+  hosts: master
+  become: true
+  tasks:
+    - name: "STORAGE | 1. Install local-path-provisioner"
+      command: "kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.26/deploy/local-path-storage.yaml"
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: false
+
+    - name: "STORAGE | 2. Wait for provisioner to be ready"
+      command: "kubectl wait --for=condition=ready pod -l app=local-path-provisioner -n local-path-storage --timeout=120s"
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: false
+
+    - name: "STORAGE | 3. Set 'local-path' as the default StorageClass"
+      command: 'kubectl patch storageclass local-path -p ''{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'''
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: false
