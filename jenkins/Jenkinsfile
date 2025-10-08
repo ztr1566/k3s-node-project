@@ -8,6 +8,9 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  imagePullSecrets:
+  - name: dockerhub-secret
+  - name: quay-secret
   containers:
   - name: node
     image: node:20-alpine
