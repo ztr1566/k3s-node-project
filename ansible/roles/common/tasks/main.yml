@@ -28,3 +28,7 @@
       - git
       - socat
     state: present
+
+- name: Kill any existing node_exporter process to free up port 9100
+  ansible.builtin.shell: "pkill node_exporter || true"
+  changed_when: false
