@@ -10,11 +10,11 @@ kind: Pod
 spec:
   containers:
   - name: node
-    image: node:24-alpine
+    image: node:22-alpine
     command: ["cat"]
     tty: true
   - name: buildah
-    image: buildah/buildah
+    image: buildah/buildah:latest
     command: ["cat"]
     tty: true
     volumeMounts:
