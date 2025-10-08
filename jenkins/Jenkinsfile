@@ -1,4 +1,6 @@
-// jenkins/Jenkinsfile
+// jenkins/Jenkinsfile - Final Corrected Version
+@Library('my-project-library') _
+
 pipeline {
     agent {
         kubernetes {
@@ -38,7 +40,7 @@ spec:
   volumes:
   - name: docker-config
     secret:
-      secretName: dockerhub-secret # Using the secret we created with JCasC
+      secretName: dockerhub-secret
       items:
       - key: .dockerconfigjson
         path: config.json
@@ -49,7 +51,6 @@ spec:
     }
 
     environment {
-        // --- Using Docker Hub instead of ECR ---
         DOCKER_REPO    = "zizoo1566/my-node-app" // Your Docker Hub repo name
         GIT_REPO_URL   = "github.com/ztr1566/k3s-node-project.git" // Your project repo URL
     }
@@ -57,14 +58,11 @@ spec:
     stages {
         stage('Initialize') {
             steps {
-                checkout scm
-                // --- Loading Shared Library from the same repo ---
-                library identifier: 'my-project-library@main', retriever: legacySCM(scm)
-
                 script {
-                    // --- Constructing Docker Hub image tag ---
+                    // Jenkins automatically checks out the code, so we just define the image name
                     def imageTag = "${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
                     env.FULL_IMAGE_NAME = "${env.DOCKER_REPO}:${imageTag}"
+                    echo "Pipeline will build and deploy image: ${env.FULL_IMAGE_NAME}"
                 }
             }
         }
@@ -87,7 +85,6 @@ spec:
         
         stage('Lint & Test') {
             steps {
-                // This function is from the Shared Library
                 runTests(appDir: 'app')
             }
         }
@@ -95,11 +92,10 @@ spec:
         stage('Build & Push Image') {
             steps {
                 script {
-                    // This function is from the Shared Library
                     def digestFileName = buildAndPush(
                         imageName: env.FULL_IMAGE_NAME,
                         dockerfile: 'app/Dockerfile',
-                        context: 'dir://app' // Kaniko requires this format
+                        context: 'dir://app'
                     )
                     env.DIGEST_FILE_NAME = digestFileName
                 }
@@ -123,7 +119,6 @@ spec:
 
         stage('Deploy to Cluster (GitOps way)') {
             steps {
-                // This function from the Shared Library will commit to Git, and ArgoCD will do the rest
                 deployToCluster(
                     imageURI: env.FULL_IMAGE_NAME,
                     manifestPath: 'kubernetes/manifests/nodejs-app/deployment.yaml',
