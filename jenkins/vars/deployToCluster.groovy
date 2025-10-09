@@ -1,26 +1,25 @@
 def call(Map config) {
     def imageURI = config.imageURI
     def manifestPath = config.manifestPath
-    def gitRepoUrl = config.gitRepoUrl
 
-    echo "--- Preparing to update deployment manifest in Git ---"
-    withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-        sh """
-            echo "Updating Kubernetes manifest..."
+    echo "--- Updating deployment manifest locally ---"
+    
+    // We will only modify the file and commit it.
+    // The actual push will be handled by the 'Push automation updates' stage.
+    sh """
+        echo "Updating Kubernetes manifest..."
 
-            # Configure Git user for this commit
-            git config --global user.name 'auto_build_user'
-            git config --global user.email 'auto_build_user@example.com'
+        # Configure Git user for this commit
+        git config --global user.name 'Jenkins Bot'
+        git config --global user.email 'ci-bot@example.com'
 
-            # Use sed to replace the image line in the deployment file
-            sed -i 's|image: .*|image: ${imageURI}|g' ${manifestPath}
+        # Use sed to update the image tag in the deployment file
+        sed -i 's|image: .*|image: ${imageURI}|g' ${manifestPath}
 
-            # Commit and push the change
-            git add ${manifestPath}
-            # [skip ci] is important to prevent this commit from triggering another build
-            git commit -m "Update image to ${imageURI} [skip ci]"
-            git push https://${GIT_USER}:${GIT_TOKEN}@${gitRepoUrl} HEAD:master
-        """
-    }
-    echo "--- Manifest updated in Git. ArgoCD will sync the new version. ---"
+        # Add the modified file and commit it with the correct skip message
+        git add ${manifestPath}
+        git commit -m "Update image to ${imageURI} [ci skip]" || echo "No changes to commit"
+    """
+    
+    echo "--- Manifest updated and committed locally. ---"
 }
