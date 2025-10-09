@@ -240,6 +240,7 @@ spec:
   - name: kubectl           # Kubernetes operations  
   - name: trivy             # Container security scanning
   - name: snyk              # Code security analysis
+  - name: git               # Push updated image to master branch
 ```
 
 ### 3. GitOps with ArgoCD App-of-Apps Pattern
