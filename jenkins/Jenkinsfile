@@ -1,4 +1,3 @@
-// Jenkinsfile with dedicated git container
 @Library('my-project-library') _
 
 pipeline {
@@ -91,14 +90,11 @@ spec:
                 container('git') {
                     withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                         sh """
-                            # This container has git and basic tools like sed
-                            apk add --no-cache gettext # This is for the 'envsubst' command, a safer way to replace variables
-                            
+                            git config --global --add safe.directory /home/jenkins/agent/workspace/k8s-nodejs-project
                             git config --global user.name "Jenkins Bot"
                             git config --global user.email "ci-bot@example.com"
                             
                             git remote set-url origin https://${GIT_USER}:${GIT_TOKEN}@${env.GIT_REPO_URL}
-
                             git fetch origin
                             git checkout master
                             
