@@ -1,4 +1,4 @@
-// jenkins/Jenkinsfile - Final version with ImagePullSecret
+// jenkins/Jenkinsfile - Final version with CI Skip Check
 @Library('my-project-library') _
 
 pipeline {
@@ -54,6 +54,22 @@ spec:
     }
 
     stages {
+        stage('Check for CI Skip') {
+            steps {
+                script {
+                    def commitMessage = sh(returnStdout: true, script: 'git log -1 --pretty=%B').trim()
+
+                    if (commitMessage.contains('[ci skip]')) {
+                        echo "Commit message contains '[ci skip]'. Aborting pipeline."
+                        currentBuild.result = 'ABORTED'
+                        error("Pipeline aborted due to [ci skip] tag.")
+                    } else {
+                        echo "Commit message does not contain [ci skip]. Proceeding with the build."
+                    }
+                }
+            }
+        }
+
         stage('Initialize') {
             when {
                 not {
