@@ -65,6 +65,8 @@ spec:
         }
 
         stage('Security Scan: Code (SAST & SCA)') {
+            when { branch 'main' }
+
             steps {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     container('snyk') {
@@ -81,12 +83,16 @@ spec:
         }
 
         stage('Lint & Test') {
+            when { branch 'main' }
+
             steps {
                 runTests(appDir: 'app')
             }
         }
 
         stage('Build & Push Image') {
+            when { branch 'main' }
+
             steps {
                 script {
                     def digestFileName = buildAndPush(
@@ -99,7 +105,11 @@ spec:
             }
         }
 
+
+
         stage('Security Scan: Image (Trivy)') {
+            when { branch 'main' }
+
             steps {
                 container('trivy') {
                     script {
@@ -115,6 +125,8 @@ spec:
         }
 
         stage('Deploy to Cluster (GitOps way)') {
+            when { branch 'main' }
+
             steps {
                 deployToCluster(
                     imageURI: env.FULL_IMAGE_NAME,
@@ -123,5 +135,28 @@ spec:
                 )
             }
         }
+
+        stage('Push automation updates') {
+            when { branch 'main'}
+            steps {
+                container('node') {
+                    script {
+                        sh '''
+                            git config user.name "Jenkins Bot"
+                            git config user.email "ci-bot@localhost"
+                            git fetch origin automation-updates
+                            git checkout automation-updates
+                            git merge origin/main --no-commit --no-ff || true
+                            git add .
+                            git commit -m "Automated CI updates [ci skip]" || echo "No changes"
+                            git push origin automation-updates
+                            git checkout main
+                        '''
+                    }
+                }
+            }
+        }
     }
 }
+
+
