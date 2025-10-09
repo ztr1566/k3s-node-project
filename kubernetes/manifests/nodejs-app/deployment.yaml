@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: nodejs-app-container
-          image: zizoo1566/my-node-app:46bc527-16
+          image: zizoo1566/my-node-app:d262127-17
           ports:
             - containerPort: 3000
           env:
