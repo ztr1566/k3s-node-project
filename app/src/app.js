@@ -12,10 +12,7 @@ const register = new client.Registry();
 client.collectDefaultMetrics({ register });
 
 // Express.js Configuration
-app.get('/metrics', async (req, res) => {
-  res.setHeader('Content-Type', register.contentType);
-  res.send(await register.metrics());
-});
+
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 app.use(express.static("views"));
@@ -34,6 +31,10 @@ app.use(methodOverride("_method"));
 // Middleware
 
 app.use(allRoutes);
+app.get('/metrics', async (req, res) => {
+  res.setHeader('Content-Type', register.contentType);
+  res.send(await register.metrics());
+});
 
 // Server Connection
 
