@@ -6,7 +6,7 @@ def call(Map config) {
     echo "--- Preparing to update deployment manifest in Git ---"
     withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
         sh """
-            echo "Updating Kubernetes manifest......"
+            echo "Updating Kubernetes manifest...."
 
             # Configure Git user for this commit
             git config --global user.name "Jenkins CI"
