@@ -1,4 +1,4 @@
-# Kubernetes Node.js DevOps Platform
+# KubeFlow DevOps Platform
 
 A complete enterprise-grade DevOps platform showcasing modern CI/CD practices, GitOps deployment, and comprehensive monitoring for Node.js applications on Kubernetes.
 
