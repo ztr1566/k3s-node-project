@@ -7,7 +7,7 @@ A complete enterprise-grade DevOps platform showcasing modern CI/CD practices, G
 ```mermaid
 flowchart TD
     %% Git Repository
-    A[📁 Git Repository<br/>k8s-node-project] --> B[🔄 Jenkins Pipeline] 
+    A[📁 Git Repository<br/>k8s-node-project] --> B[🔄 Jenkins Pipeline]
 
     %% CI/CD Pipeline Stages
     B --> C[🏁 Stage 1: Initialize<br/>Git commit + Build number]
