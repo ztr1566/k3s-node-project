@@ -1,13 +1,17 @@
-// ده ملف buildAndPush.groovy بتاعك
 def call(Map config) {
     def imageName = config.imageName
-    def dockerfile = config.dockerfile ?: 'Dockerfile'
-    def context = config.context ?: '.' // Kaniko بيستخدم dir://app، لكن buildah بياخد المسار عادي
+    def dockerfile = config.dockerfile
+    def context = config.context
     def digestFileName = "image-digest.txt"
 
-    container('buildah') {
-        sh "buildah bud --format docker -t ${imageName} -f ${dockerfile} ./app"
-        sh "buildah push ${imageName}"
+    container('kaniko') {
+        sh """
+            /kaniko/executor --context=${context} \\
+                             --dockerfile=${dockerfile} \\
+                             --destination=${imageName} \\
+                             --digest-file=${digestFileName} \\
+                             --cleanup
+        """
     }
     return digestFileName
 }

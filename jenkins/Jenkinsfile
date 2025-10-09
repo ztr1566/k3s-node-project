@@ -10,22 +10,18 @@ kind: Pod
 spec:
   imagePullSecrets:
   - name: dockerhub-secret
-  - name: quay-secret
   containers:
   - name: node
-    image: node:20-alpine
+    image: node:24-alpine
     command: ["cat"]
     tty: true
-  - name: buildah
-    image: quay.io/buildah/buildah:v1.33.4
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:v1.11.0
     command: ["cat"]
     tty: true
-    env:
-    - name: STORAGE_DRIVER
-      value: vfs
     volumeMounts:
     - name: docker-config
-      mountPath: /root/.docker
+      mountPath: /kaniko/.docker
   - name: kubectl
     image: bitnami/kubectl:latest
     command: ["cat"]
@@ -58,7 +54,6 @@ spec:
     }
 
     stages {
-        // ... باقي المراحل زي ما هي بدون تغيير ...
         stage('Initialize') {
             steps {
                 script {
