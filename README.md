@@ -12,8 +12,8 @@ flowchart TD
     %% CI/CD Pipeline Stages
     B --> C[🏁 Stage 1: Initialize<br/>Git commit + Build number]
     C --> D[🔒 Stage 2: Security Scan<br/>Snyk SAST/SCA]
-    D --> E[🧪 Stage 3: Lint & Test<br/>Node.js 24-alpine]
-    E --> F[🏗️ Stage 4: Build & Push<br/>Kaniko Rootless Build]
+    D --> E[🧪 Stage 3: Lint & Test<br/>Node.js 24-alpine]  
+    E --> F[🏗️ Stage 4: Build & Push<br/>Kaniko Rootless Build]  
     F --> G[🛡️ Stage 5: Container Scan<br/>Trivy Vulnerability Scan]
     G --> H[🚀 Stage 6: GitOps Deploy<br/>kubectl Update Manifests]
 
