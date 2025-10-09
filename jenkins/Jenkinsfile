@@ -50,7 +50,7 @@ spec:
 
     environment {
         DOCKER_REPO    = "zizoo1566/my-node-app"
-        GIT_REPO_URL   = "github.com/ztr1566/k3s-node-project.git"
+        GIT_REPO_URL   = "github.com/ztr1566/k8s-node-project.git"
     }
 
     stages {
@@ -65,7 +65,7 @@ spec:
         }
 
         stage('Security Scan: Code (SAST & SCA)') {
-            when { branch 'main' }
+            when { branch 'master' }
 
             steps {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
@@ -83,7 +83,7 @@ spec:
         }
 
         stage('Lint & Test') {
-            when { branch 'main' }
+            when { branch 'master' }
 
             steps {
                 runTests(appDir: 'app')
@@ -91,7 +91,7 @@ spec:
         }
 
         stage('Build & Push Image') {
-            when { branch 'main' }
+            when { branch 'master' }
 
             steps {
                 script {
@@ -108,7 +108,7 @@ spec:
 
 
         stage('Security Scan: Image (Trivy)') {
-            when { branch 'main' }
+            when { branch 'master' }
 
             steps {
                 container('trivy') {
@@ -125,7 +125,7 @@ spec:
         }
 
         stage('Deploy to Cluster (GitOps way)') {
-            when { branch 'main' }
+            when { branch 'master' }
 
             steps {
                 deployToCluster(
@@ -137,7 +137,7 @@ spec:
         }
 
         stage('Push automation updates') {
-            when { branch 'main'}
+            when { branch 'master'}
             steps {
                 container('node') {
                     script {
@@ -146,11 +146,11 @@ spec:
                             git config user.email "ci-bot@localhost"
                             git fetch origin automation-updates
                             git checkout automation-updates
-                            git merge origin/main --no-commit --no-ff || true
+                            git merge origin/master --no-commit --no-ff || true
                             git add .
                             git commit -m "Automated CI updates [ci skip]" || echo "No changes"
                             git push origin automation-updates
-                            git checkout main
+                            git checkout master
                         '''
                     }
                 }
