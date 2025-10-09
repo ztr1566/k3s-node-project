@@ -442,7 +442,7 @@ kubectl get pods -n your-namespace
 kubectl logs -f deployment/my-node-app -n your-namespace
 
 # Access application
-# kubectl port-forward svc/my-node-app 3001:3001 -n your-namespace --> I updated service to NodePort at 30007; so you ignore this step.
+# kubectl port-forward svc/my-node-app 3001:3001 -n your-namespace --> Updated service to NodePort at 30007. Ignore this step.
 ```
 
 
