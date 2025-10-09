@@ -1,4 +1,3 @@
----
 # tasks file for common role (Definitive Final Version - All Fixes Included)
 - name: 1. Ensure hostname is resolvable
   lineinfile:
@@ -93,8 +92,28 @@
     state: present
     update_cache: true
 
-# التاسك الجديدة اللي هنضيفها
-- name: 14a. Ensure /etc/containerd directory exists
+# --- NEW TASK 1 ---
+# Install the complete Docker Engine package suite.
+# This goes after containerd, as the Docker repo is already configured.
+- name: 14a. Install Docker Engine packages
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - docker-buildx-plugin
+    state: present
+    update_cache: true
+
+# --- NEW TASK 2 ---
+# Add the user running the playbook to the 'docker' group.
+# This allows running docker commands without sudo.
+- name: 14b. Add user to the 'docker' group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: 14c. Ensure /etc/containerd directory exists
   file:
     path: /etc/containerd
     state: directory
@@ -114,6 +133,14 @@
     state: restarted
     enabled: true
     daemon_reload: true
+
+# --- NEW TASK 3 ---
+# Ensure the Docker service is running and enabled on boot, just like containerd.
+- name: 16a. Start and enable Docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: true
 
 - name: 17. CLEANUP | Forcefully remove existing k8s repo and key files
   file:
