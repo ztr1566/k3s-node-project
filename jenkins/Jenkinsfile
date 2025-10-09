@@ -1,4 +1,4 @@
-// Jenkinsfile for the 'development' to 'master' workflow - Simplified
+// Jenkinsfile with dedicated git container
 @Library('my-project-library') _
 
 pipeline {
@@ -28,6 +28,10 @@ spec:
     tty: true
   - name: snyk
     image: snyk/snyk:docker
+    command: ["cat"]
+    tty: true
+  - name: git
+    image: alpine/git:latest
     command: ["cat"]
     tty: true
   volumes:
@@ -84,9 +88,12 @@ spec:
 
         stage('Update Manifest and Push to Master') {
             steps {
-                container('node') {
+                container('git') {
                     withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                         sh """
+                            # This container has git and basic tools like sed
+                            apk add --no-cache gettext # This is for the 'envsubst' command, a safer way to replace variables
+                            
                             git config --global user.name "Jenkins Bot"
                             git config --global user.email "ci-bot@example.com"
                             
