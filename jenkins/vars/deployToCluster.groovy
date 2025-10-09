@@ -18,7 +18,7 @@ def call(Map config) {
             # Commit and push the change
             git add ${manifestPath}
             # [skip ci] is important to prevent this commit from triggering another build
-            git commit -m "[skip ci] Update image to ${imageURI}."
+            git commit -m "[skip ci] Update image to ${imageURI}"
             git push https://${GIT_USER}:${GIT_TOKEN}@${gitRepoUrl} HEAD:master
         """
     }
