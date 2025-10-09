@@ -21,19 +21,16 @@ spec:
     volumeMounts:
     - name: docker-config
       mountPath: /kaniko/.docker
-  - name: kubectl
-    image: bitnami/kubectl:latest
-    command: ["cat"]
-    tty: true
   - name: trivy
     image: aquasec/trivy:latest
     command: ["cat"]
     tty: true
-    volumeMounts:
-    - name: docker-config
-      mountPath: /kaniko/.docker
   - name: snyk
     image: snyk/snyk:docker
+    command: ["cat"]
+    tty: true
+  - name: git
+    image: alpine/git:latest
     command: ["cat"]
     tty: true
   volumes:
@@ -48,89 +45,71 @@ spec:
     }
 
     environment {
-        DOCKER_REPO    = "zizoo1566/my-node-app"
-        GIT_REPO_URL   = "github.com/ztr1566/k8s-node-project.git"
+        DOCKER_REPO = "zizoo1566/my-node-app"
+        GIT_REPO_URL = "github.com/ztr1566/k8s-node-project.git"
     }
 
     stages {
-        // This entire pipeline will only run on branches that are NOT 'master'
-        stage('Run on Feature Branch') {
-            when {
-                not { branch 'master' }
-            }
-            stages {
-                stage('Initialize') {
-                    steps {
-                        script {
-                            def imageTag = "${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
-                            env.FULL_IMAGE_NAME = "${env.DOCKER_REPO}:${imageTag}"
-                            echo "Pipeline will build and deploy image: ${env.FULL_IMAGE_NAME}"
-                        }
-                    }
-                }
+        stage('Build, Test, and Scan') {
+            steps {
+                script {
+                    def imageTag = "dev-${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
+                    env.FULL_IMAGE_NAME = "${env.DOCKER_REPO}:${imageTag}"
+                    echo "Building image: ${env.FULL_IMAGE_NAME}"
 
-                stage('Security Scan: Code (SAST & SCA)') {
-                    steps {
+                    container('snyk') {
                         withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                            container('snyk') {
-                                dir('app') {
-                                    sh "snyk test --severity-threshold=high"
-                                    sh "snyk code test --severity-threshold=high"
-                                }
+                            dir('app') {
+                                sh "snyk test --severity-threshold=high"
+                                sh "snyk code test --severity-threshold=high"
                             }
                         }
                     }
-                }
 
-                stage('Lint & Test') {
-                    steps {
-                        runTests(appDir: 'app')
+                    runTests(appDir: 'app')
+
+                    env.DIGEST_FILE_NAME = buildAndPush(
+                        imageName: env.FULL_IMAGE_NAME,
+                        dockerfile: 'app/Dockerfile',
+                        context: 'dir://app'
+                    )
+
+                    container('trivy') {
+                        def imageDigest = readFile(env.DIGEST_FILE_NAME).trim()
+                        def repositoryUri = env.FULL_IMAGE_NAME.tokenize(':')[0]
+                        def imageWithDigest = "${repositoryUri}@${imageDigest}"
+                        echo "Scanning image with Trivy: ${imageWithDigest}"
+                        sh "trivy image --exit-code 1 --severity HIGH,CRITICAL --scanners vuln ${imageWithDigest}"
                     }
                 }
+            }
+        }
 
-                stage('Build & Push Image') {
-                    steps {
-                        script {
-                            def digestFileName = buildAndPush(
-                                imageName: env.FULL_IMAGE_NAME,
-                                dockerfile: 'app/Dockerfile',
-                                context: 'dir://app'
-                            )
-                            env.DIGEST_FILE_NAME = digestFileName
-                        }
-                    }
-                }
+        stage('Update Manifest and Push to Master') {
+            steps {
+                container('git') {
+                    withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                        sh """
+                            git config --global --add safe.directory /home/jenkins/agent/workspace/k8s-nodejs-project
+                            git config --global user.name "Jenkins Bot"
+                            git config --global user.email "ci-bot@example.com"
+                            
+                            git remote set-url origin https://${GIT_USER}:${GIT_TOKEN}@${env.GIT_REPO_URL}
+                            git fetch origin
+                            git checkout master
+                            
+                            echo "Merging changes from origin/development into master..."
+                            git merge origin/development --no-ff -m "Merge branch 'development' [ci skip]"
 
-                stage('Security Scan: Image (Trivy)') {
-                    steps {
-                        container('trivy') {
-                            script {
-                                def imageDigest = readFile(env.DIGEST_FILE_NAME).trim()
-                                def repositoryUri = env.FULL_IMAGE_NAME.tokenize(':')[0]
-                                def imageWithDigest = "${repositoryUri}@${imageDigest}"
-
-                                echo "Scanning image with Trivy: ${imageWithDigest}"
-                                sh "trivy image --exit-code 1 --severity HIGH,CRITICAL --scanners vuln ${imageWithDigest}"
-                            }
-                        }
-                    }
-                }
-
-                stage('Update Manifest and Push to Branch') {
-                    steps {
-                        script {
-                            // Step 1: Update the manifest file locally
-                            deployToCluster(
-                                imageURI: env.FULL_IMAGE_NAME,
-                                manifestPath: 'kubernetes/manifests/nodejs-app/deployment.yaml'
-                            )
-
-                            // Step 2: Push the committed changes back to the same branch
-                            echo "--- Pushing manifest changes to branch: ${env.BRANCH_NAME} ---"
-                            withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-                                sh "git push https://${GIT_USER}:${GIT_TOKEN}@${env.GIT_REPO_URL} HEAD:${env.BRANCH_NAME}"
-                            }
-                        }
+                            echo "Updating manifest with image: ${env.FULL_IMAGE_NAME}"
+                            sed -i 's|image: .*|image: ${env.FULL_IMAGE_NAME}|g' kubernetes/manifests/nodejs-app/deployment.yaml
+                            
+                            git add kubernetes/manifests/nodejs-app/deployment.yaml
+                            git commit --amend --no-edit
+                            
+                            echo "Pushing final changes to master..."
+                            git push origin master
+                        """
                     }
                 }
             }
