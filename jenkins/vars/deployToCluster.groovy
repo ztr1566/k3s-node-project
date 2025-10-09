@@ -10,7 +10,7 @@ def call(Map config) {
 
             # Configure Git user for this commit
             git config --global user.email "jenkins-ci@example.com"
-            git config --global user.name "Jenkins CI Bot"
+            git config --global user.name "Jenkins CI"
 
             # Use sed to replace the image line in the deployment file
             sed -i 's|image: .*|image: ${imageURI}|g' ${manifestPath}
@@ -18,7 +18,7 @@ def call(Map config) {
             # Commit and push the change
             git add ${manifestPath}
             # [skip ci] is important to prevent this commit from triggering another build
-            git commit -m "chore(release): Update image to ${imageURI} [skip ci]"
+            git commit -m "[skip ci] Update image to ${imageURI}"
             git push https://${GIT_USER}:${GIT_TOKEN}@${gitRepoUrl} HEAD:master
         """
     }
