@@ -16,8 +16,8 @@ spec:
     command: ["cat"]
     tty: true
   - name: kaniko
-    image: gcr.io/kaniko-project/executor:v1.11.0
-    command: ["cat"]
+    image: gcr.io/kaniko-project/executor:v1.11.0-debug
+    command: ["/bin/sh", "-c", "cat"]
     tty: true
     volumeMounts:
     - name: docker-config
