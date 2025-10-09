@@ -1,4 +1,4 @@
-// Jenkinsfile for the 'development' branch workflow
+// Jenkinsfile for the 'development' to 'master' workflow
 @Library('my-project-library') _
 
 pipeline {
@@ -43,22 +43,21 @@ spec:
 
     environment {
         DOCKER_REPO = "zizoo1566/my-node-app"
-        GIT_REPO_URL = "github.com/ztr1566/k8s-node-project.git"
+        // Make sure the URL doesn't have 'github.com/' twice
+        GIT_REPO_URL = "github.com/ztr1566/k8s-node-project.git" 
     }
 
     stages {
         stage('Build, Test, and Scan') {
-            // This pipeline only runs on the 'development' branch
-            when { branch 'development' }
+            // This condition is an extra safety check. The main control is in the Job config.
+            when { branch 'development' } 
             
             steps {
                 script {
-                    // Generate a unique image tag
                     def imageTag = "dev-${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
                     env.FULL_IMAGE_NAME = "${env.DOCKER_REPO}:${imageTag}"
                     echo "Building image: ${env.FULL_IMAGE_NAME}"
 
-                    // Run security scans
                     container('snyk') {
                         withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                             dir('app') {
@@ -68,17 +67,14 @@ spec:
                         }
                     }
 
-                    // Run lint and tests
                     runTests(appDir: 'app')
 
-                    // Build and push the Docker image
                     env.DIGEST_FILE_NAME = buildAndPush(
                         imageName: env.FULL_IMAGE_NAME,
                         dockerfile: 'app/Dockerfile',
                         context: 'dir://app'
                     )
 
-                    // Scan the pushed image
                     container('trivy') {
                         def imageDigest = readFile(env.DIGEST_FILE_NAME).trim()
                         def repositoryUri = env.FULL_IMAGE_NAME.tokenize(':')[0]
@@ -94,34 +90,26 @@ spec:
             when { branch 'development' }
 
             steps {
-                container('node') { // Using a container with git
+                container('node') {
                     withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                         sh """
-                            # Configure Git user
                             git config --global user.name "Jenkins Bot"
                             git config --global user.email "ci-bot@example.com"
                             
-                            # Set up remote URL with credentials for push
                             git remote set-url origin https://${GIT_USER}:${GIT_TOKEN}@${env.GIT_REPO_URL}
 
-                            # Fetch all branches from remote and switch to master
                             git fetch origin
                             git checkout master
                             
-                            # Merge changes from the development branch into master
                             echo "Merging changes from origin/development into master..."
                             git merge origin/development --no-ff -m "Merge branch 'development' [ci skip]"
 
-                            # Update the deployment manifest with the new image
                             echo "Updating manifest with image: ${env.FULL_IMAGE_NAME}"
                             sed -i 's|image: .*|image: ${env.FULL_IMAGE_NAME}|g' kubernetes/manifests/nodejs-app/deployment.yaml
                             
-                            # Add the manifest change to the commit
                             git add kubernetes/manifests/nodejs-app/deployment.yaml
-                            # Amend the previous merge commit to include this change
                             git commit --amend --no-edit
                             
-                            # Push the merge and the manifest update to master
                             echo "Pushing final changes to master..."
                             git push origin master
                         """
