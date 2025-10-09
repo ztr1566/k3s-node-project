@@ -307,6 +307,170 @@ The monitoring configuration includes:
 - **Alerting Rules**: Production-ready alert configurations
 - **Namespace Monitoring**: Complete observability across all components
 
+## 🔀 Branching Strategy and CI/CD Workflow
+
+To ensure a stable and automated process **without CI loops**, this project follows a specific **Git branching model** that separates development work from production deployments.
+
+### Branching Model
+
+#### `development` Branch
+The primary branch for all active development work. All new features, bug fixes, and changes **must be pushed here only**. This is where developers collaborate and where the CI/CD pipeline is triggered.
+
+**Key Characteristics:**
+- Active development branch
+- Monitored by Jenkins for automated builds
+- Receives all direct developer commits
+- Serves as the integration point for new code
+
+#### `master` Branch  
+The **source of truth for production deployments**. This branch is continuously monitored by ArgoCD for automated synchronization and deployment to the Kubernetes cluster.
+
+**Key Characteristics:**
+- Production-ready code only
+- Monitored by ArgoCD for GitOps sync
+- **No direct developer pushes allowed**
+- Updated exclusively by the Jenkins pipeline
+- Contains the definitive Kubernetes manifests
+
+### Automated Pipeline Workflow
+
+The entire process is triggered by a single push to the `development` branch, creating a fully automated deployment pipeline:
+
+#### 1. Trigger Event
+A developer pushes code to the `development` branch, initiating the automated workflow.
+
+#### 2. Jenkins Pipeline Execution
+The Jenkins pipeline is configured to listen exclusively on the `development` branch and starts automatically upon detecting changes.
+
+#### 3. Build & Test Stages
+
+**Stage 2: Security Scan (Code)**
+- Snyk performs Static Application Security Testing (SAST)
+- Software Composition Analysis (SCA) scans all dependencies
+- Pipeline fails on HIGH severity vulnerabilities
+
+**Stage 3: Lint & Test**
+- Executes `npm run lint` for code quality validation
+- Runs `npm test` to verify application correctness
+- Ensures code meets quality standards before proceeding
+
+**Stage 4: Build & Push Docker Image**
+- Kaniko builds a Docker image securely (rootless)
+- Tags image uniquely using Git commit SHA and build number
+- Pushes tagged image to Docker Hub registry
+- Returns image digest for security scanning
+
+**Stage 5: Security Scan (Image)**
+- Trivy scans the newly built Docker image
+- Identifies vulnerabilities in the container layers
+- Pipeline fails on HIGH/CRITICAL findings
+
+#### 4. Automated GitOps Deployment
+
+**Stage 6: Update Production Manifests**
+- Pipeline checks out the `master` branch
+- Merges approved changes from `development` into `master`
+- Updates `kubernetes/manifests/deployment.yaml` with the new image tag
+- Commits the updated manifest with descriptive commit message
+- Pushes the updated `master` branch back to GitHub
+
+#### 5. ArgoCD Synchronization
+- ArgoCD continuously monitors the `master` branch
+- Detects the updated Kubernetes manifest
+- Automatically syncs the cluster state with Git
+- Deploys the new application version with zero manual intervention
+
+> **CI Loop Prevention**: This workflow is fully automated and **prevents CI loops** because the push to `master` does **not** trigger Jenkins builds. Jenkins only responds to `development` branch changes, while ArgoCD only responds to `master` branch changes, creating a clean separation of concerns.
+
+### Developer Workflow
+
+To contribute effectively and maintain the integrity of the branching strategy, follow this development cycle:
+
+#### 1. Sync Your Local Repository
+Before starting new work, ensure your local `development` branch is up-to-date:
+
+```bash
+# Switch to development branch
+git checkout development
+
+# Pull latest changes (which may include automatic updates from master)
+git pull origin development
+
+# Optional: Sync with master to get latest production state
+git pull origin master
+```
+
+#### 2. Develop and Test Locally
+```bash
+# Create a feature branch (optional but recommended)
+git checkout -b feature/your-feature-name
+
+# Make your changes
+# ... edit files ...
+
+# Test locally
+npm install
+npm run lint
+npm test
+```
+
+#### 3. Commit and Push to Development
+```bash
+# Stage your changes
+git add .
+
+# Commit with descriptive message
+git commit -m "feat: add new feature description"
+
+# Push to development branch
+git push origin development
+```
+
+#### 4. Monitor Pipeline Execution
+- Check Jenkins for pipeline execution status
+- Review security scan results
+- Verify all stages pass successfully
+- Monitor ArgoCD for deployment status
+
+#### 5. Verify Deployment
+```bash
+# Check application status in Kubernetes
+kubectl get pods -n your-namespace
+
+# View application logs
+kubectl logs -f deployment/my-node-app -n your-namespace
+
+# Access application
+kubectl port-forward svc/my-node-app 3000:3000 -n your-namespace
+```
+
+### Branch Protection Rules
+
+To enforce this workflow, configure the following branch protection rules in your Git repository:
+
+**`master` Branch Protection:**
+- Require pull request reviews before merging
+- Require status checks to pass (Jenkins pipeline)
+- Restrict push access to Jenkins service account only
+- Include administrators in restrictions
+
+**`development` Branch Protection:**
+- Require pull request reviews for team collaboration (optional)
+- Allow force pushes with lease for rebasing (optional)
+- Enable required status checks
+
+### Workflow Benefits
+
+This branching strategy provides several key advantages:
+
+- **Separation of Concerns**: Development work is isolated from production deployments
+- **Automated Quality Gates**: Multiple security and quality checks before production
+- **Zero-Touch Deployments**: No manual intervention required for deployments
+- **Audit Trail**: Complete Git history of all changes and deployments
+- **Rollback Capability**: Easy reversion to previous versions via Git
+- **CI Loop Prevention**: Clear separation between CI trigger (development) and CD trigger (master)
+- **GitOps Compliance**: Git remains the single source of truth for production state
+
 ## 🏆 Key Technical Achievements
 
 ### Infrastructure Optimization
@@ -364,6 +528,6 @@ This project is open source and available under the MIT License.
 
 ---
 
-**Built with ❤️ for the DevOps Community**
+**Built by me for the DevOps Community**
 
 *This project represents hundreds of hours of hands-on DevOps engineering, solving real-world challenges from infrastructure failures to complex service discovery. Every configuration has been battle-tested in production scenarios, making it a reliable reference for enterprise DevOps implementations.*
