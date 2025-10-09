@@ -1,16 +1,16 @@
-# KubeFlow DevOps Platform
+# KubeFlow DevOps Platform 
 
 A complete enterprise-grade DevOps platform showcasing modern CI/CD practices, GitOps deployment, and comprehensive monitoring for Node.js applications on Kubernetes.
 
-## 🏗️ Architecture Overview
+## 🏗️ Architecture Overview 
 
 ```mermaid
 flowchart TD
     %% Git Repository
-    A[📁 Git Repository<br/>k8s-node-project] --> B[🔄 Jenkins Pipeline]
+    A[📁 Git Repository<br/>k8s-node-project] --> B[🔄 Jenkins Pipeline] 
 
     %% CI/CD Pipeline Stages
-    B --> C[🏁 Stage 1: Initialize<br/>Git commit + Build number]
+    B --> C[🏁 Stage 1: Initialize<br/>Git commit + Build number] 
     C --> D[🔒 Stage 2: Security Scan<br/>Snyk SAST/SCA]
     D --> E[🧪 Stage 3: Lint & Test<br/>Node.js 24-alpine]
     E --> F[🏗️ Stage 4: Build & Push<br/>Kaniko Rootless Build]
