@@ -56,8 +56,11 @@ spec:
     stages {
         stage('Initialize') {
             when { 
-                branch 'master' || branch 'automation-updates'
-             }
+               anyOf {
+                    branch 'master';
+                    branch 'automation-updates'
+                }
+            }
             steps {
                 script {
                     def imageTag = "${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
@@ -69,8 +72,11 @@ spec:
 
         stage('Security Scan: Code (SAST & SCA)') {
             when { 
-                branch 'master' || branch 'automation-updates'
-             }
+               anyOf {
+                    branch 'master';
+                    branch 'automation-updates'
+                }
+            }
 
             steps {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
@@ -89,8 +95,11 @@ spec:
 
         stage('Lint & Test') {
             when { 
-                branch 'master' || branch 'automation-updates'
-             }
+               anyOf {
+                    branch 'master';
+                    branch 'automation-updates'
+                }
+            }
 
             steps {
                 runTests(appDir: 'app')
@@ -99,8 +108,11 @@ spec:
 
         stage('Build & Push Image') {
             when { 
-                branch 'master' || branch 'automation-updates'
-             }
+               anyOf {
+                    branch 'master';
+                    branch 'automation-updates'
+                }
+            }
 
             steps {
                 script {
@@ -118,8 +130,11 @@ spec:
 
         stage('Security Scan: Image (Trivy)') {
             when { 
-                branch 'master' || branch 'automation-updates'
-             }
+               anyOf {
+                    branch 'master';
+                    branch 'automation-updates'
+                }
+            }
 
             steps {
                 container('trivy') {
@@ -137,8 +152,11 @@ spec:
 
         stage('Deploy to Cluster (GitOps way)') {
             when { 
-                branch 'master' || branch 'automation-updates'
-             }
+               anyOf {
+                    branch 'master';
+                    branch 'automation-updates'
+                }
+            }
 
             steps {
                 deployToCluster(
@@ -150,9 +168,7 @@ spec:
         }
 
         stage('Push automation updates') {
-            when { 
-                branch 'master' || branch 'automation-updates'
-             }
+            when { branch 'master' }
             steps {
                 container('node') {
                     script {
