@@ -1,9 +1,10 @@
-// jenkins/Jenkinsfile - Final version with CI Skip Check
+// jenkins/Jenkinsfile - The REAL Final Version
 @Library('my-project-library') _
 
 pipeline {
     agent {
         kubernetes {
+            // ... your kubernetes agent config ...
             yaml """
 apiVersion: v1
 kind: Pod
@@ -54,32 +55,11 @@ spec:
     }
 
     stages {
-        stage('Check for CI Skip') {
-            steps {
-                script {
-                    def commitMessage = sh(returnStdout: true, script: 'git log -1 --pretty=%B').trim()
-
-                    if (commitMessage.contains('[ci skip]')) {
-                        echo "Commit message contains '[ci skip]'. Aborting pipeline."
-                        currentBuild.result = 'ABORTED'
-                        error("Pipeline aborted due to [ci skip] tag.")
-                    } else {
-                        echo "Commit message does not contain [ci skip]. Proceeding with the build."
-                    }
-                }
-            }
-        }
+        // No need for the 'Check for CI Skip' stage anymore
 
         stage('Initialize') {
-            when {
-                not {
-                    anyOf {
-                        branch 'master';
-                        branch 'automation-updates'
-                    }
-                }
-            }
-            steps {
+            when { not { branch 'master' } }
+            steps { /* ... same as before ... */ 
                 script {
                     def imageTag = "${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
                     env.FULL_IMAGE_NAME = "${env.DOCKER_REPO}:${imageTag}"
@@ -89,16 +69,9 @@ spec:
         }
 
         stage('Security Scan: Code (SAST & SCA)') {
-            when {
-                not {
-                    anyOf {
-                        branch 'master';
-                        branch 'automation-updates'
-                    }
-                }
-            }
-            steps {
-                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+            when { not { branch 'master' } }
+            steps { /* ... same as before ... */ 
+                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     container('snyk') {
                         dir('app') {
                             echo "--- Running Snyk SCA (Dependency Scan) ---"
@@ -113,29 +86,15 @@ spec:
         }
 
         stage('Lint & Test') {
-            when {
-                not {
-                    anyOf {
-                        branch 'master';
-                        branch 'automation-updates'
-                    }
-                }
-            }
-            steps {
+            when { not { branch 'master' } }
+            steps { /* ... same as before ... */ 
                 runTests(appDir: 'app')
             }
         }
 
         stage('Build & Push Image') {
-            when {
-                not {
-                    anyOf {
-                        branch 'master';
-                        branch 'automation-updates'
-                    }
-                }
-            }
-            steps {
+            when { not { branch 'master' } }
+            steps { /* ... same as before ... */
                 script {
                     def digestFileName = buildAndPush(
                         imageName: env.FULL_IMAGE_NAME,
@@ -148,16 +107,9 @@ spec:
         }
 
         stage('Security Scan: Image (Trivy)') {
-            when {
-                not {
-                    anyOf {
-                        branch 'master';
-                        branch 'automation-updates'
-                    }
-                }
-            }
-            steps {
-                container('trivy') {
+            when { not { branch 'master' } }
+            steps { /* ... same as before ... */ 
+                 container('trivy') {
                     script {
                         def imageDigest = readFile(env.DIGEST_FILE_NAME).trim()
                         def repositoryUri = env.FULL_IMAGE_NAME.tokenize(':')[0]
@@ -170,41 +122,21 @@ spec:
             }
         }
 
-        stage('Deploy to Cluster (GitOps way)') {
-            when {
-                not {
-                    anyOf {
-                        branch 'master';
-                        branch 'automation-updates'
-                    }
-                }
-            }
+        stage('Update Manifest') {
+            when { not { branch 'master' } }
             steps {
-                deployToCluster(
+                deployToCluster( // This now only commits locally
                     imageURI: env.FULL_IMAGE_NAME,
-                    manifestPath: 'kubernetes/manifests/nodejs-app/deployment.yaml',
-                    gitRepoUrl: env.GIT_REPO_URL
+                    manifestPath: 'kubernetes/manifests/nodejs-app/deployment.yaml'
                 )
             }
         }
-
-        stage('Push automation updates') {
-            when { branch 'master' } // This stage ONLY runs on master
+        
+        stage('Push Manifest Changes') {
+            when { not { branch 'master' } } // This now runs on the feature branch
             steps {
-                container('node') {
-                    script {
-                        sh '''
-                            git config user.name "Jenkins Bot"
-                            git config user.email "ci-bot@localhost"
-                            git fetch origin automation-updates
-                            git checkout automation-updates
-                            git merge origin/master --no-commit --no-ff || true
-                            git add .
-                            git commit -m "Automated CI updates [ci skip]" || echo "No changes"
-                            git push origin automation-updates
-                            git checkout master
-                        '''
-                    }
+                withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                    sh "git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${env.GIT_REPO_URL} HEAD:${env.BRANCH_NAME}"
                 }
             }
         }
