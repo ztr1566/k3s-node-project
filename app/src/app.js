@@ -29,12 +29,16 @@ let methodOverride = require("method-override");
 app.use(methodOverride("_method"));
 
 // Middleware
+app.get('/metrics', async (req, res) => {
+  try {
+    res.setHeader('Content-Type', register.contentType);
+    res.send(await register.metrics());
+  } catch (err) {
+    res.status(500).end(err);
+  }
+});
 
 app.use(allRoutes);
-app.get('/metrics', async (req, res) => {
-  res.setHeader('Content-Type', register.contentType);
-  res.send(await register.metrics());
-});
 
 // Server Connection
 
