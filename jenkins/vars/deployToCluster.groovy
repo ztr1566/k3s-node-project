@@ -19,7 +19,7 @@ def call(Map config) {
             git add ${manifestPath}
             # [skip ci] is important to prevent this commit from triggering another build
             git commit -m "chore(release): Update image to ${imageURI} [skip ci]"
-            git push https://${GIT_USER}:${GIT_TOKEN}@${gitRepoUrl} HEAD:main
+            git push https://${GIT_USER}:${GIT_TOKEN}@${gitRepoUrl} HEAD:master
         """
     }
     echo "--- Manifest updated in Git. ArgoCD will sync the new version. ---"
