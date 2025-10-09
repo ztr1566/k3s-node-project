@@ -9,8 +9,8 @@ def call(Map config) {
             echo "Updating Kubernetes manifest..."
 
             # Configure Git user for this commit
-            git config --global user.name "Jenkins CI"
-            git config --global user.email "jenkins-ci@example.com"
+            git config --global user.name 'auto_build_user'
+            git config --global user.email 'auto_build_user@example.com'
 
             # Use sed to replace the image line in the deployment file
             sed -i 's|image: .*|image: ${imageURI}|g' ${manifestPath}
