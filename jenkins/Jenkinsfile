@@ -1,4 +1,4 @@
-// Jenkinsfile for the 'development' to 'master' workflow
+// Jenkinsfile for the 'development' to 'master' workflow - Simplified
 @Library('my-project-library') _
 
 pipeline {
@@ -43,15 +43,11 @@ spec:
 
     environment {
         DOCKER_REPO = "zizoo1566/my-node-app"
-        // Make sure the URL doesn't have 'github.com/' twice
-        GIT_REPO_URL = "github.com/ztr1566/k8s-node-project.git" 
+        GIT_REPO_URL = "github.com/ztr1566/k8s-node-project.git"
     }
 
     stages {
         stage('Build, Test, and Scan') {
-            // This condition is an extra safety check. The main control is in the Job config.
-            when { branch 'development' } 
-            
             steps {
                 script {
                     def imageTag = "dev-${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
@@ -87,8 +83,6 @@ spec:
         }
 
         stage('Update Manifest and Push to Master') {
-            when { branch 'development' }
-
             steps {
                 container('node') {
                     withCredentials([usernamePassword(credentialsId: 'github-pat', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
