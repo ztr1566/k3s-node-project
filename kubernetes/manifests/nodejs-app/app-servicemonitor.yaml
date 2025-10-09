@@ -4,7 +4,7 @@ metadata:
   name: nodejs-app-servicemonitor
   namespace: monitoring
   labels:
-    release: prometheus
+    release: monitoring
 spec:
   namespaceSelector:
     matchNames:
