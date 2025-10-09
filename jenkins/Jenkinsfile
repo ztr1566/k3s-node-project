@@ -55,6 +55,7 @@ spec:
 
     stages {
         stage('Initialize') {
+            when { branch 'master' }
             steps {
                 script {
                     def imageTag = "${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}"
